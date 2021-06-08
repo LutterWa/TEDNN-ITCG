@@ -94,67 +94,12 @@ def transfer_ensemble(path, trans_set_size, learn_rate, batch_size, epochs):
     return model_en
 
 
-def transfer_greedy(path, trans_set_size, learn_rate, batch_size, epochs):
-    """
-    迁移-贪心学习
-    :param path: 迁移数据集路径
-    :param trans_set_size: 迁移数据集大小
-    :param learn_rate: 迁移学习率
-    :param batch_size: 迁移样本尺寸
-    :param epochs: 迁移样本使用次数
-    :return:
-    """
-    x_raw, y_raw = load_data(path)
-    x_trans = x_raw[0:trans_set_size, :]
-    y_trans = y_raw[0:trans_set_size, :]
-    print("迁移学习样本数={}".format(len(x_trans)))
-
-    def MSE(y, t):
-        return np.mean((y - t) ** 2)
-
-    model_pre = None
-    mse_min = 100
-    for _ in range(5):
-        model = keras.models.load_model("./flight_model{}.h5".format(_))  # 加载各模型
-        y_hat = model.predict(x_trans)
-        mse = MSE(y_trans, y_hat)
-        if mse < mse_min:
-            mse_min = mse
-            model_pre = model
-
-    for layer in model_pre.layers[:-1]:  # 冻结参数
-        layer.trainable = False
-
-    model_pre.compile(loss='mse', optimizer=keras.optimizers.Adam(lr=learn_rate))
-
-    model_pre.fit(x=[x_trans, x_trans, x_trans, x_trans, x_trans],
-                  y=y_trans,
-                  batch_size=batch_size,
-                  epochs=epochs,
-                  verbose=2)
-    model_pre.save('./flight_Tr.h5')
-
-    return model_pre
-
-
 if __name__ == '__main__':
     pre_train = False
-    test_TrEN = True
 
     if pre_train is True:
-        if test_TrEN is True:
-            p = "flight_data_concat_TrEN.mat"
-            num = "TrEN"
-            # train_network(path=p, num=num, trans_set_size=4651)
-            x_test, y_test = load_data(path=p)
-            x_test = x_test[100000:200000, :]
-            y_test = y_test[100000:200000, :]
-
-            model = keras.models.load_model("./flight_model{}.h5".format(num))  # 加载模型
-            scipy.io.savemat("dnn_test{}.mat".format(num), {'x': x_test, 'y_hat': model.predict(x_test), 'y': y_test})
-        else:
-            i = int(sys.argv[1])
-            train_network(path="flight_data_concat_{}.mat".format(i + 1), num=i)
+        i = int(sys.argv[1])
+        train_network(path="flight_data_concat_{}.mat".format(i + 1), num=i)
     else:
         p = "flight_data_concat_TrEN.mat"
         # transfer_ensemble(path=p, trans_set_size=4651, learn_rate=0.0001, batch_size=1, epochs=10)
@@ -163,14 +108,14 @@ if __name__ == '__main__':
         y_test = y_test[100000:200000, :]
         y_en = []
         for i in range(20):
-            m_en = transfer_greedy(path=p, trans_set_size=4651, learn_rate=0.0001, batch_size=1, epochs=i + 1)
+            m_en = transfer_ensemble(path=p, trans_set_size=4651, learn_rate=0.0001, batch_size=1, epochs=i + 1)
             y_en.append(m_en.predict(x_test))
 
         y_hat = []
-        # for i in range(5):
-        #     m_pre = keras.models.load_model('flight_model{}.h5'.format(i, i))
-        #     y_hat.append(m_pre.predict(x_test))
-        # y_hat = np.squeeze(y_hat, axis=2).T
+        for i in range(5):
+            m_pre = keras.models.load_model('flight_model{}.h5'.format(i, i))
+            y_hat.append(m_pre.predict(x_test))
+        y_hat = np.squeeze(y_hat, axis=2).T
 
         dict_En = {'x': x_test, 'y_hat': y_hat, 'y': y_test, 'y_en': np.squeeze(y_en).T}
         dataEn = r'Tr_test.mat'
