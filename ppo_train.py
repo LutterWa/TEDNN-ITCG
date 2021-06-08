@@ -19,13 +19,13 @@ TRAIN_EPISODES = 1000  # total number of episodes for training
 TEST_EPISODES = 100  # total number of episodes for testing
 GAMMA = 0.99
 REWARD_SAVE_CASE = 0
-dnn = keras.models.load_model("./predictor_module/flight_model4.h5")
-# dnn = keras.models.load_model("./predictor_module/flight_TrEN.h5")
+# dnn = keras.models.load_model("./predictor_module/flight_model4.h5")
+dnn = keras.models.load_model("./predictor_module/flight_TrEN.h5")
 
 
-class OMissile(MISSILE):
+class OMissile(MISSILE_TrEN):
     def __init__(self):
-        super().__init__(k=5.0)
+        super().__init__(k=[3.0, 1.5, 1.0])
         dnn_state = np.array([self.Y[1] / 1e2, self.Y[2], self.R / 1e4, self.q])[np.newaxis, :]
         self.tgo = max(float(dnn.predict([dnn_state, dnn_state, dnn_state, dnn_state, dnn_state],
                                          use_multiprocessing=True)), 1e-5)
@@ -152,8 +152,7 @@ if __name__ == '__main__':
             action = 0.
             episode_reward = 0.
 
-            # env.modify()  # [0., 200., 0, -20000., 20000, 200]
-            env.modify()  # [0., 200., -180 / RAD, 5000., 10000, 100]
+            env.modify()
             td = env.get_tgo() * random.uniform(1.1, 1.2)
             # td = 120
             state = env.get_state(td)
@@ -199,4 +198,4 @@ if __name__ == '__main__':
             dict_reward['target_time'].append(td)
             dict_reward['actual_time'].append(env.Y[0])
 
-        savemat('./ppo_monte_pre5.mat', dict(dict_reward, **dict_sim))
+        savemat('./ppo_monte.mat', dict(dict_reward, **dict_sim))
